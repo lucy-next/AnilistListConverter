@@ -3,7 +3,7 @@ A simple Tool to Convert Anilist Lists from Manga to Anime or Anime to Manga. Wr
 
 Info: This tool only Converts Entries that have the status "Planned".
 
-Warn: Due to Anilists API beeing a bitch & the API package beeing absolutly shit, 
+Warn: Due to Anilists API beeing a bitch & the API package beeing absolutly weird, 
 </br>i had to implement my own bad ratelimit, that might not work correctly.
 </br>If the Program is done, redo the whole Process again, just to make sure.
 
