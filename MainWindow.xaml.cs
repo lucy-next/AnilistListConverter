@@ -18,12 +18,12 @@ public partial class MainWindow
 
     AniClient aniClient = new AniClient();
     
-    int ratelimit = 3000;
+    int ratelimit = 500;
+    bool changedRatelimit = false;
 
     public MainWindow()
     {
         InitializeComponent();
-        aniClient.RateChanged += ChangeRatelimit;
         this.MouseDown += delegate (object sender, MouseButtonEventArgs e) { if (e.ChangedButton == MouseButton.Left) DragMove(); };
     }
     
@@ -31,14 +31,10 @@ public partial class MainWindow
     {
         Environment.Exit(0);
     }
-    public void ChangeRatelimit(object? sender, AniRateEventArgs e)
+    public void ChangeRatelimit(int num)
     {
-        int oldRate = ratelimit;
-        ratelimit = e.RateLimit;
-        if (oldRate != ratelimit)
-        {
-            LogBox.Text += "\n" + "New Rate limit. One API Call every " + ratelimit + "ms";
-        }
+        changedRatelimit = true;
+        ratelimit = num;
     }
 
     private void ApiButton_OnClick(object sender, RoutedEventArgs e)
@@ -92,7 +88,6 @@ public partial class MainWindow
     {
         try
         {
-            
             MediaType originalType = direction ? MediaType.Anime : MediaType.Manga;
             LogBox.Text += "\n" +  "OriginalType: " + originalType.ToString();
             LogBox.ScrollToEnd();
@@ -134,7 +129,7 @@ public partial class MainWindow
                 LogBox.ScrollToEnd();
                 return;
             }
-
+            
             LogBox.Text += "\n" + $"Pagination pageIndex={pagination.PageIndex}, pageSize={pagination.PageSize}";
             LogBox.ScrollToEnd();
 
@@ -149,8 +144,7 @@ public partial class MainWindow
             }
             catch (Exception ex)
             {
-                LogBox.Text += "\n" + "MoveLists: GetUserEntryCollectionAsync";
-                LogBox.ScrollToEnd();
+                ChangeRatelimit(1000);
                 return;
             }
 
@@ -207,6 +201,13 @@ public partial class MainWindow
 
             List<string?> notFound = new();
 
+            LogBox.Text += "\n" + "Waiting 10s then continuing to move at a slow rate.";
+            LogBox.Text += "\n" + "Sorry that it has to be slow, but the API is ass.";
+            LogBox.ScrollToEnd();
+            
+            await Task.Delay(10000);
+            
+            ChangeRatelimit(2000);
             foreach (var data in entries)
             {
                 try
@@ -254,7 +255,11 @@ public partial class MainWindow
                     }
                     await Task.Delay(ratelimit);
                     await aniClient.DeleteMediaEntryAsync(data.Id);
-
+                    if (changedRatelimit)
+                    {
+                        ChangeRatelimit(2000);
+                        changedRatelimit = false;
+                    }
                     if (newID == 0)
                         continue;
 
@@ -265,19 +270,27 @@ public partial class MainWindow
                     };
                     await Task.Delay(ratelimit);
                     await aniClient.SaveMediaEntryAsync(newID, mutation);
+                    if (changedRatelimit)
+                    {
+                        ChangeRatelimit(2000);
+                        changedRatelimit = false;
+                    }
                 }
                 catch (Exception ex)
                 {
                     notFound.Add(data.Media?.Title?.NativeTitle ?? "Unknown");
+                    ChangeRatelimit(30000);
                     Console.WriteLine($"Error processing entry {data.Id}: {ex.Message}");
                 }
             }
 
+            LogBox.Text += "\n" + "Important, please restart the Program and recheck if all got moved.";
+            LogBox.ScrollToEnd();
             Confirm.Content = "Moved all Entries.";
         }
         catch (Exception ex)
         {
-            LogBox.Text += "\n" + $"MainWindow.MoveLists: {ex.Message}";
+            ChangeRatelimit(30000);
             LogBox.ScrollToEnd();
         }
     }
